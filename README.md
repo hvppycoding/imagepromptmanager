@@ -38,7 +38,7 @@ pip install -r requirements.txt
 ```
 
 ## Run
-python imagepromptmanager.py
+`python imagepromptmanager.py`
 
 ## Requirements
 - Python 3.10+
