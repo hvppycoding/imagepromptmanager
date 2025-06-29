@@ -2,14 +2,17 @@ from transformers import AutoModelForCausalLM, AutoProcessor
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QLabel, QTextEdit, QPushButton,
     QListWidgetItem, QDialog, QScrollArea, QFileDialog, QSplitter, QWidget,
-    QVBoxLayout
+    QVBoxLayout, QMessageBox
 )
 from PySide6.QtGui import QPixmap, QIcon, QAction, QFont
 from PySide6.QtCore import Qt, QSize
 from PIL import Image as PILImage
+from PIL import ImageGrab, Image
 import torch
 import sys
 import os
+import subprocess
+import platform
 
 class ImagePromptManager(QMainWindow):
     def __init__(self, root_dir):
@@ -124,9 +127,24 @@ class ImagePromptManager(QMainWindow):
         self.example_list.itemClicked.connect(self.show_large_image)
         col4_layout.addWidget(self.example_list)
 
+        button_row = QWidget()
+        button_layout = QVBoxLayout(button_row)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.open_folder_button = QPushButton("Open Folder")
+        self.open_folder_button.clicked.connect(self.open_data_folder)
+        button_layout.addWidget(self.open_folder_button)
+        
+        self.refresh_examples_button = QPushButton("Refresh Examples")
+        self.refresh_examples_button.clicked.connect(self.refresh_current_image_data)
+        button_layout.addWidget(self.refresh_examples_button)
+
         self.paste_button = QPushButton("Paste image from clipboard")
         self.paste_button.clicked.connect(self.paste_clipboard_image)
-        col4_layout.addWidget(self.paste_button)
+        button_layout.addWidget(self.paste_button)
+
+
+        col4_layout.addWidget(button_row)
 
         self.splitter.addWidget(col4_widget)
 
@@ -189,6 +207,12 @@ class ImagePromptManager(QMainWindow):
                     item = QListWidgetItem(icon, f)
                     item.setData(Qt.UserRole, os.path.join(folder, f))
                     self.example_list.addItem(item)
+                    
+                    
+    def refresh_current_image_data(self):
+        current = self.image_list.currentItem()
+        if current:
+            self.load_image_data(current, None)
 
     def update_image_display(self):
         if self.image_pixmap is None:
@@ -236,11 +260,48 @@ class ImagePromptManager(QMainWindow):
         with open(path, "w", encoding="utf-8") as f:
             f.write(self.edited_tag.toPlainText())
 
+    # def paste_clipboard_image(self):
+    #     clipboard = QApplication.clipboard()
+    #     image = clipboard.image()
+    #     if image.isNull():
+    #         return
+    #     item = self.image_list.currentItem()
+    #     if not item:
+    #         return
+    #     filename = item.data(Qt.UserRole)
+    #     base = os.path.splitext(filename)[0]
+    #     folder = os.path.join(self.data_dir, base)
+    #     os.makedirs(folder, exist_ok=True)
+    #     existing = [f for f in os.listdir(folder) if f.lower().endswith(('.png', '.jpg'))]
+    #     example_name = f"example_{len(existing) + 1}.png"
+    #     path = os.path.join(folder, example_name)
+    #     image.save(path)
+    #     self.load_image_data(item, None)
+        
+
     def paste_clipboard_image(self):
-        clipboard = QApplication.clipboard()
-        image = clipboard.image()
-        if image.isNull():
+        item = self.image_list.currentItem()
+        if not item:
             return
+
+        image = ImageGrab.grabclipboard()
+        if image is None:
+            QMessageBox.warning(self, "Paste Failed", "No image found in clipboard.")
+            return
+
+        filename = item.data(Qt.UserRole)
+        base = os.path.splitext(filename)[0]
+        folder = os.path.join(self.data_dir, base)
+        os.makedirs(folder, exist_ok=True)
+
+        existing = [f for f in os.listdir(folder) if f.lower().endswith(('.png', '.jpg'))]
+        example_name = f"example_{len(existing) + 1}.png"
+        path = os.path.join(folder, example_name)
+
+        image.save(path)
+        self.load_image_data(item, None)
+
+    def open_data_folder(self):
         item = self.image_list.currentItem()
         if not item:
             return
@@ -248,11 +309,13 @@ class ImagePromptManager(QMainWindow):
         base = os.path.splitext(filename)[0]
         folder = os.path.join(self.data_dir, base)
         os.makedirs(folder, exist_ok=True)
-        existing = [f for f in os.listdir(folder) if f.lower().endswith(('.png', '.jpg'))]
-        example_name = f"example_{len(existing) + 1}.png"
-        path = os.path.join(folder, example_name)
-        image.save(path)
-        self.load_image_data(item, None)
+
+        if platform.system() == "Windows":
+            os.startfile(folder)
+        elif platform.system() == "Darwin":
+            subprocess.run(["open", folder])
+        else:
+            subprocess.run(["xdg-open", folder])
 
     def show_large_image(self, item):
         path = item.data(Qt.UserRole)
