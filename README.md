@@ -30,12 +30,16 @@ root/
 ```
 
 ## Installation
+
+```bash
 git clone https://github.com/hvppycoding/imagepromptmanager.git
 cd imagepromptmanager
 pip install -r requirements.txt
+```
 
 ## Run
-python image_prompt_manager.py
+
+`python imagepromptmanager.py`
 
 ## Requirements
 - Python 3.10+
