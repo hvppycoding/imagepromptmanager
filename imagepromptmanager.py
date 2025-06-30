@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem, QDialog, QScrollArea, QFileDialog, QSplitter, QWidget,
     QVBoxLayout, QMessageBox
 )
-from PySide6.QtGui import QPixmap, QIcon, QAction, QFont
+from PySide6.QtGui import QPixmap, QIcon, QAction, QFont, QGuiApplication
 from PySide6.QtCore import Qt, QSize
 from PIL import Image as PILImage
 from PIL import ImageGrab, Image
@@ -83,6 +83,11 @@ class ImagePromptManager(QMainWindow):
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_scroll.setWidget(self.image_label)
         col2_layout.addWidget(self.image_scroll)
+
+        self.copy_clipboard_button = QPushButton("Copy Reference Image to Clipboard")
+        self.copy_clipboard_button.clicked.connect(self.copy_reference_to_clipboard)
+        col2_layout.addWidget(self.copy_clipboard_button)
+
         self.splitter.addWidget(col2_widget)
 
         # Column 3: Tags
@@ -164,6 +169,21 @@ class ImagePromptManager(QMainWindow):
                 item = QListWidgetItem(f"{file} [{num_examples}]")
                 item.setData(Qt.UserRole, file)
                 self.image_list.addItem(item)
+                
+    def copy_reference_to_clipboard(self):
+        item = self.image_list.currentItem()
+        if not item:
+            return
+
+        filename = item.data(Qt.UserRole)
+        image_path = os.path.join(self.images_dir, filename)
+
+        if not os.path.exists(image_path):
+            return
+
+        pixmap = QPixmap(image_path)
+        if not pixmap.isNull():
+            QGuiApplication.clipboard().setPixmap(pixmap)
 
     def load_image_data(self, current, previous):
         if not current:

@@ -1,4 +1,4 @@
 PySide6>=6.4
-transformers>=4.30
+transformers==4.49.0
 torch>=1.13
 pillow
